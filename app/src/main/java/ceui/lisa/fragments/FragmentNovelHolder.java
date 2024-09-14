@@ -50,7 +50,6 @@ import ceui.lisa.models.NovelBean;
 import ceui.lisa.models.NovelDetail;
 import ceui.lisa.models.NovelSearchResponse;
 import ceui.lisa.models.TagsBean;
-import ceui.lisa.models.WebNovel;
 import ceui.lisa.utils.Common;
 import ceui.lisa.utils.GlideUtil;
 import ceui.lisa.utils.Params;
@@ -58,6 +57,7 @@ import ceui.lisa.utils.PixivOperate;
 import ceui.lisa.view.ScrollChange;
 import ceui.loxia.SpaceHolder;
 import ceui.loxia.TextDescHolder;
+import ceui.loxia.WebNovel;
 import ceui.loxia.novel.NovelImageHolder;
 import ceui.loxia.novel.NovelTextHolder;
 import ceui.pixiv.ui.common.CommonAdapter;
@@ -66,6 +66,8 @@ import gdut.bsx.share2.Share2;
 import gdut.bsx.share2.ShareContentType;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.schedulers.Schedulers;
+import me.zhanghai.android.fastscroll.FastScroller;
+import me.zhanghai.android.fastscroll.FastScrollerBuilder;
 import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.Response;
@@ -97,6 +99,10 @@ public class FragmentNovelHolder extends BaseFragment<FragmentNovelHolderBinding
 
     @Override
     public void initView() {
+        baseBind.viewPager.setVerticalScrollBarEnabled(false);
+        baseBind.viewPager.setScrollbarFadingEnabled(false);
+        FastScroller fb = new FastScrollerBuilder(baseBind.viewPager).build();
+
         BarUtils.setNavBarColor(mActivity, getResources().getColor(R.color.hito_bg));
         if (Shaft.sSettings.getNovelHolderColor() != 0) {
             setBackgroundColor(Shaft.sSettings.getNovelHolderColor());
@@ -421,7 +427,7 @@ public class FragmentNovelHolder extends BaseFragment<FragmentNovelHolderBinding
         if (novelText == null || novelText.isEmpty()) {
             novelText = "";
         }
-        if(novelDetail.getParsedChapters() != null && novelDetail.getParsedChapters().size() > 0){
+        if(novelDetail.getParsedChapters() != null && !novelDetail.getParsedChapters().isEmpty()){
             String uploadedImageMark = "[uploadedimage:";
             String pixivImageMark = "[pixivimage:";
             if (novelText.contains(uploadedImageMark) || novelText.contains(pixivImageMark)) {
@@ -433,37 +439,7 @@ public class FragmentNovelHolder extends BaseFragment<FragmentNovelHolderBinding
                 List<ListItemHolder> holderList = new ArrayList<>();
                 holderList.add(new SpaceHolder());
                 for (String s : textList) {
-                    if (s.contains(uploadedImageMark)) {
-                        long id = 0L;
-                        int startIndex = s.indexOf(uploadedImageMark) + uploadedImageMark.length();
-                        int endIndex = s.indexOf("]");
-                        try {
-                            id = Long.parseLong(s.substring(startIndex, endIndex));
-                        } catch (Exception exception) {
-                            exception.printStackTrace();
-                        }
-                        holderList.add(new NovelImageHolder(NovelImageHolder.Type.UploadedImage, id, 0, mWebNovel));
-                    } else if (s.contains(pixivImageMark)) {
-                        long id = 0L;
-                        int startIndex = s.indexOf(pixivImageMark) + pixivImageMark.length();
-                        int endIndex = s.indexOf("]");
-                        String result = s.substring(startIndex, endIndex);
-                        int indexInIllust = 0;
-                        try {
-                            if (result.contains("-")) {
-                                String[] ret = result.split("-");
-                                indexInIllust = Integer.parseInt(ret[1]);
-                                id = Long.parseLong(ret[0]);
-                            } else  {
-                                id = Long.parseLong(result);
-                            }
-                        } catch (Exception exception) {
-                            exception.printStackTrace();
-                        }
-                        holderList.add(new NovelImageHolder(NovelImageHolder.Type.PixivImage, id, indexInIllust, mWebNovel));
-                    } else {
-                        holderList.add(new NovelTextHolder(s, Common.getNovelTextColor()));
-                    }
+                    holderList.addAll(WebNovelParser.Companion.buildNovelHolders(mWebNovel, s));
                 }
                 holderList.add(new SpaceHolder());
                 holderList.add(new TextDescHolder(getString(R.string.string_107)));
