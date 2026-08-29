@@ -1,5 +1,6 @@
 package ceui.lisa.fragments;
 
+import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.MenuItem;
@@ -11,6 +12,7 @@ import androidx.databinding.ViewDataBinding;
 
 import com.bumptech.glide.Glide;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -18,6 +20,7 @@ import java.util.stream.Collectors;
 import ceui.lisa.R;
 import ceui.lisa.activities.BaseActivity;
 import ceui.lisa.activities.Shaft;
+import ceui.lisa.activities.TemplateActivity;
 import ceui.lisa.adapters.BaseAdapter;
 import ceui.lisa.adapters.NAdapter;
 import ceui.lisa.cache.Cache;
@@ -33,12 +36,12 @@ import ceui.lisa.models.NovelBean;
 import ceui.lisa.models.NovelDetail;
 import ceui.lisa.models.NovelSeriesItem;
 import ceui.lisa.models.UserBean;
-import ceui.lisa.models.WebNovel;
 import ceui.lisa.repo.NovelSeriesDetailRepo;
 import ceui.lisa.utils.Common;
 import ceui.lisa.utils.GlideUtil;
 import ceui.lisa.utils.Params;
 import ceui.lisa.utils.PixivOperate;
+import ceui.loxia.WebNovel;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.schedulers.Schedulers;
 import okhttp3.ResponseBody;
@@ -95,27 +98,42 @@ public class FragmentNovelSeriesDetail extends NetListFragment<FragmentNovelSeri
                 } else if (item.getItemId() == R.id.batch_download_as_one) {
                     Map<Integer, String> taskContainer = new HashMap<>();
                     String lineSeparator = System.lineSeparator();
+
+                   var si=mResponse.getNovel_series_detail();
+                   var  seriesTitle = "《"+si.getTitle()+"》"+lineSeparator+
+                           "Name:"+si.getUser().getName()+"(https://www.pixiv.net/users/"+si.getUser().getId()+")"+lineSeparator+
+                           "Source:"+"https://www.pixiv.net/novel/series/"+si.getId()+lineSeparator+
+                           "Caption:"+lineSeparator+si.getCaption()+lineSeparator+lineSeparator+
+                           "----------------------"+lineSeparator+lineSeparator+lineSeparator;
+
+                    int count = 0;
                     for (NovelBean novelBean : allItems) {
+                        count++;
+
                         if (novelBean.isLocalSaved()) {
-                            String sb = lineSeparator + novelBean.getTitle() + " - " + novelBean.getId() + lineSeparator +
-                                    Cache.get().getModel(Params.NOVEL_KEY + novelBean.getId(), NovelDetail.class).getNovel_text();
+                            String title = "第"+count+"篇•"+ IllustDownload.truncateTitle(novelBean.getTitle(), 30);
+                            String sb = IllustDownload.getNovelText(title,novelBean,Cache.get().getModel(Params.NOVEL_KEY + novelBean.getId(), NovelDetail.class));
                             taskContainer.put(novelBean.getId(), sb);
                             if (taskContainer.size() == allItems.size()) {
                                 String content = taskContainer.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(Map.Entry::getValue).collect(Collectors.joining(lineSeparator));
+                                 content =seriesTitle+content;
                                 saveNovelSeriesToDownload(mResponse.getNovel_series_detail(), content);
                             }
                         } else {
+                            int finalCount = count;
                             Retro.getAppApi().getNovelDetailV2(Shaft.sUserModel.getAccess_token(), novelBean.getId()).enqueue(new retrofit2.Callback<ResponseBody>() {
+
                                 @Override
                                 public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
                                     new WebNovelParser(response) {
                                         @Override
                                         public void onNovelPrepared(@NonNull NovelDetail novelDetail, @NonNull WebNovel webNovel) {
-                                            String sb = lineSeparator + novelBean.getTitle() + " - " + novelBean.getId() + lineSeparator +
-                                                    novelDetail.getNovel_text();
+                                            String title = "第"+finalCount+"篇•"+ IllustDownload.truncateTitle(novelBean.getTitle(), 30);
+                                            String sb =  IllustDownload.getNovelText(title, novelBean, novelDetail);
                                             taskContainer.put(novelBean.getId(), sb);
                                             if (taskContainer.size() == allItems.size()) {
                                                 String content = taskContainer.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(Map.Entry::getValue).collect(Collectors.joining(lineSeparator));
+                                                content=seriesTitle+content;
                                                 saveNovelSeriesToDownload(mResponse.getNovel_series_detail(), content);
                                             }
                                         }
@@ -171,6 +189,9 @@ public class FragmentNovelSeriesDetail extends NetListFragment<FragmentNovelSeri
                 NovelBean bean = listNovelOfSeries.getList().get(0);
                 UserBean userBean = bean.getUser();
                 initUser(userBean);
+                initReadLatestButton(listNovelOfSeries.getNovel_series_detail().getContent_count(),
+                        listNovelOfSeries.getNovel_series_latest_novel());
+                initAddToWatchListButton(listNovelOfSeries.getNovel_series_detail());
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -239,6 +260,29 @@ public class FragmentNovelSeriesDetail extends NetListFragment<FragmentNovelSeri
             public void doSomething(Uri t) {
                 Common.showToast(getString(R.string.string_279), 2);
             }
+        });
+    }
+
+    private void initReadLatestButton(int latest, NovelBean novel) {
+        baseBind.readLatest.setText(mContext.getString(R.string.read_latest_episode_with_num, latest));
+        baseBind.readLatest.setOnClickListener(v -> {
+            Intent intent = new Intent(mContext, TemplateActivity.class);
+            intent.putExtra(Params.CONTENT, novel);
+            intent.putExtra(TemplateActivity.EXTRA_FRAGMENT, "小说详情");
+            intent.putExtra("hideStatusBar", true);
+            mContext.startActivity(intent);
+        });
+    }
+
+    private void initAddToWatchListButton(NovelSeriesItem item) {
+        if (item.isWatchlist_added()) {
+            baseBind.addToWatchlist.setText(R.string.already_in_your_watchlist);
+        } else {
+            baseBind.addToWatchlist.setText(R.string.add_to_watchlist);
+        }
+
+        baseBind.addToWatchlist.setOnClickListener(v -> {
+            PixivOperate.postNovelWatchlist(item, baseBind.addToWatchlist);
         });
     }
 }

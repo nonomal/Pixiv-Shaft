@@ -31,8 +31,9 @@ import ceui.lisa.viewmodel.UserViewModel
 import ceui.loxia.Client
 import ceui.loxia.Event
 import ceui.loxia.ObjectPool
+import ceui.loxia.ProgressIndicator
 import ceui.loxia.ProgressTextButton
-import ceui.refactor.setOnClick
+import ceui.pixiv.utils.setOnClick
 import com.bumptech.glide.Glide
 import com.github.ybq.android.spinkit.style.Wave
 import com.qmuiteam.qmui.skin.QMUISkinManager
@@ -41,6 +42,7 @@ import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.schedulers.Schedulers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import timber.log.Timber
 
 class UActivity : BaseActivity<ActivityNewUserBinding>(), Display<UserDetailResponse> {
     private var userId = 0
@@ -236,11 +238,11 @@ class UActivity : BaseActivity<ActivityNewUserBinding>(), Display<UserDetailResp
     }
 }
 
-fun Fragment.followUser(sender: ProgressTextButton, userId: Int, followType: String) {
+fun Fragment.followUser(sender: ProgressIndicator, userId: Int, followType: String) {
     activity?.followUser(sender, userId, followType)
 }
 
-fun FragmentActivity.followUser(sender: ProgressTextButton, userId: Int, followType: String) {
+fun FragmentActivity.followUser(sender: ProgressIndicator, userId: Int, followType: String) {
     lifecycleScope.launch {
         try {
             val pendingFollowType = if (Shaft.sSettings.isPrivateStar) {
@@ -274,11 +276,11 @@ fun FragmentActivity.followUser(sender: ProgressTextButton, userId: Int, followT
     }
 }
 
-fun Fragment.unfollowUser(sender: ProgressTextButton, userId: Int) {
+fun Fragment.unfollowUser(sender: ProgressIndicator, userId: Int) {
     activity?.unfollowUser(sender, userId)
 }
 
-fun FragmentActivity.unfollowUser(sender: ProgressTextButton, userId: Int) {
+fun FragmentActivity.unfollowUser(sender: ProgressIndicator, userId: Int) {
     lifecycleScope.launch {
         try {
             sender.showProgress()
@@ -291,7 +293,7 @@ fun FragmentActivity.unfollowUser(sender: ProgressTextButton, userId: Int) {
             ObjectPool.unFollowUser(userId.toLong())
             Common.showToast(getString(R.string.cancel_like))
         } catch (ex: Exception) {
-            ex.printStackTrace()
+            Timber.e(ex)
             Common.showToast(ex.message)
         } finally {
             sender.hideProgress()

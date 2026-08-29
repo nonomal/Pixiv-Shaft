@@ -1,28 +1,22 @@
 package ceui.pixiv.ui.works
 
 import androidx.core.view.updateLayoutParams
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import ceui.lisa.annotations.ItemHolder
 import ceui.lisa.databinding.CellGalleryBinding
 import ceui.lisa.utils.GlideUrlChild
 import ceui.loxia.Illust
-import ceui.loxia.MetaPage
-import ceui.loxia.findActionReceiver
 import ceui.loxia.findActionReceiverOrNull
 import ceui.pixiv.ui.common.ListItemHolder
 import ceui.pixiv.ui.common.ListItemViewHolder
 import ceui.pixiv.ui.common.getImageDimensions
 import ceui.pixiv.ui.common.setUpWithTaskStatus
 import ceui.pixiv.ui.task.LoadTask
-import ceui.pixiv.ui.task.TaskStatus
-import ceui.refactor.ppppx
-import ceui.refactor.screenWidth
-import ceui.refactor.setOnClick
+import ceui.pixiv.utils.ppppx
+import ceui.pixiv.utils.screenWidth
+import ceui.pixiv.utils.setOnClick
 import com.bumptech.glide.Glide
-import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.github.panpf.sketch.loadImage
-import java.io.File
+import timber.log.Timber
 import kotlin.math.roundToInt
 
 class GalleryHolder(
@@ -47,28 +41,45 @@ class GalleryViewHolder(bd: CellGalleryBinding) :
 
     override fun onBindViewHolder(holder: GalleryHolder, position: Int) {
         super.onBindViewHolder(holder, position)
+        // 清除上一次的图片，避免复用时闪现旧图
+        binding.image.setImageDrawable(null)
+        binding.image.setImageBitmap(null)
         holder.loadUrl()
-        lifecycleOwner?.let {
-            holder.loadTask.file.observe(it) { file ->
-                val resolution = getImageDimensions(file)
-                val imgHeight =
-                    (screenWidth * resolution.second / resolution.first.toFloat()).roundToInt()
-                binding.resolution.text = "${resolution.first}x${resolution.second}"
-                binding.image.updateLayoutParams {
-                    width = screenWidth
-                    height = imgHeight
-                }
-                binding.image.loadImage(file)
+
+        fun resize(resolution: Pair<Int, Int>) {
+            if (resolution.first <= 0 || resolution.second <= 0) return
+            Timber.d("resizeRatio: ${resolution.second.toFloat() / resolution.first.toFloat()}")
+            val imgHeight =
+                (screenWidth * resolution.second / resolution.first.toFloat()).roundToInt()
+            binding.image.updateLayoutParams {
+                width = screenWidth
+                height = imgHeight
             }
-            binding.progressCircular.setUpWithTaskStatus(
-                holder.loadTask.status,
-                binding.errorFrame,
-                binding.emptyTitle,
-                binding.errorRetryButton,
-                holder.loadUrl,
-                it
-            )
         }
+
+        if (holder.index == 0) {
+            resize(Pair(holder.illust.width, holder.illust.height))
+            Glide.with(context).load(GlideUrlChild(holder.illust.image_urls?.large))
+                .into(binding.image)
+        } else {
+            resize(Pair(screenWidth, 300.ppppx))
+        }
+
+        holder.loadTask.result.removeObservers(lifecycleOwner)
+        holder.loadTask.result.observe(lifecycleOwner) { file ->
+            val resolution = getImageDimensions(file)
+            resize(resolution)
+            binding.image.loadImage(file) { }
+            binding.resolution.text = "${resolution.first}x${resolution.second}"
+        }
+        binding.progressCircular.setUpWithTaskStatus(
+            holder.loadTask.status,
+            binding.errorFrame,
+            binding.emptyTitle,
+            binding.errorRetryButton,
+            holder.loadUrl,
+            lifecycleOwner
+        )
 
         binding.image.setOnClick {
             it.findActionReceiverOrNull<GalleryActionReceiver>()

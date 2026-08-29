@@ -27,6 +27,9 @@ import ceui.lisa.models.TagsBean;
 import ceui.lisa.utils.GlideUtil;
 import ceui.lisa.utils.Params;
 import ceui.lisa.utils.PixivOperate;
+import ceui.loxia.Tag;
+import kotlin.Unit;
+import kotlin.jvm.functions.Function2;
 
 public class NAdapter extends BaseAdapter<NovelBean, RecyNovelBinding> {
 
@@ -96,7 +99,9 @@ public class NAdapter extends BaseAdapter<NovelBean, RecyNovelBinding> {
             }
         });
         bindView.baseBind.author.setText(target.getUser().getName());
-        bindView.baseBind.howManyWord.setText(String.format(Locale.getDefault(), "%d字", target.getText_length()));
+        var date = target.getCreate_date().substring(0, 10);
+        bindView.baseBind.howManyWord.setText(String.format(Locale.getDefault(), "%d字\n%s", target.getText_length(),date));
+        bindView.baseBind.author.setText(target.getUser().getName());
         bindView.baseBind.bookmarkCount.setText(String.valueOf(target.getTotal_bookmarks()));
         Glide.with(mContext).load(GlideUtil.getUrl(target.getImage_urls().getMaxImage())).into(bindView.baseBind.cover);
         Glide.with(mContext).load(GlideUtil.getHead(target.getUser())).into(bindView.baseBind.userHead);

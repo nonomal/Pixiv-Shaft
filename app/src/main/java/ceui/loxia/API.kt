@@ -1,8 +1,10 @@
 package ceui.loxia
 
+import ceui.lisa.models.GifResponse
 import ceui.lisa.models.NullResponse
 import ceui.lisa.utils.Params
 import okhttp3.ResponseBody
+import retrofit2.http.Body
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
 import retrofit2.http.GET
@@ -16,10 +18,56 @@ interface API {
     @FormUrlEncoded
     @POST("/v1/illust/report")
     suspend fun postFlagIllust(
-        @Field("illust_id") illust_id: Int,
+        @Field("illust_id") illust_id: Long,
         @Field("type_of_problem") type_of_problem: String?,
         @Field("message") message: String?
     ): NullResponse
+
+    @GET("/v2/search/autocomplete")
+    suspend fun getSearchSuggestions(
+        @Query("merge_plain_keyword_results") merge_plain_keyword_results: Boolean = true,
+        @Query("word") word: String,
+    ): SearchSuggestionResponse
+
+    /**
+     * {
+     * 	"tags": [{
+     * 		"name": "\u6771\u65b9",
+     * 		"translated_name": "\u4e1c\u65b9"
+     * 	}, {
+     * 		"name": "\u6771\u65b9Project",
+     * 		"translated_name": "\u4e1c\u65b9Project"
+     * 	}, {
+     * 		"name": "\u6771\u65b94\u30b3\u30de",
+     * 		"translated_name": "\u4e1c\u65b94\u683c\u6f2b\u753b"
+     * 	}, {
+     * 		"name": "\u4e1c\u65b9project",
+     * 		"translated_name": null
+     * 	}, {
+     * 		"name": "\u4e1c\u65b9",
+     * 		"translated_name": null
+     * 	}, {
+     * 		"name": "\u6771\u65b9\u30af\u30ea\u30b9\u30de\u30b9",
+     * 		"translated_name": "\u4e1c\u65b9\u5723\u8bde\u8282"
+     * 	}, {
+     * 		"name": "\u6771\u65b9\u30ed\u30b9\u30c8\u30ef\u30fc\u30c9",
+     * 		"translated_name": "\u4e1c\u65b9LostWord"
+     * 	}, {
+     * 		"name": "\u6771\u65b9Project\u30d5\u30ea\u30fc\u7acb\u3061\u7d75\u30ea\u30f3\u30af",
+     * 		"translated_name": "\u4e1c\u65b9Project\u81ea\u7531\u7acb\u7ed8\u94fe\u63a5"
+     * 	}, {
+     * 		"name": "\u6771\u65b9\u525b\u6b32\u7570\u805e",
+     * 		"translated_name": "\u4e1c\u65b9\u521a\u6b32\u5f02\u95fb"
+     * 	}, {
+     * 		"name": "\u6771\u65b9Project20\u5468\u5e74\u8a18\u5ff5\u30a4\u30e9\u30b9\u30c8",
+     * 		"translated_name": "\u4e1c\u65b9Project20\u5468\u5e74\u7eaa\u5ff5\u63d2\u753b"
+     * 	}]
+     * }
+     */
+
+
+    @POST("/v1/home/all")
+    suspend fun getHomeAll(@Body body: MainBody = MainBody()): HomeData
 
     @FormUrlEncoded
     @POST("/v1/user/follow/add")
@@ -42,16 +90,69 @@ interface API {
     )
 
     @FormUrlEncoded
+    @POST("/v2/novel/bookmark/add")
+    suspend fun addNovelBookmark(
+        @Field("novel_id") novel_id: Long,
+        @Field("restrict") followType: String
+    )
+
+    @FormUrlEncoded
+    @POST("/v1/novel/bookmark/delete")
+    suspend fun removeNovelBookmark(
+        @Field("novel_id") novel_id: Long
+    )
+
+    @FormUrlEncoded
     @POST("/v1/illust/bookmark/delete")
     suspend fun removeBookmark(
         @Field("illust_id") illust_id: Long
     )
 
+    @GET("/v1/user/me/state")
+    suspend fun getSelfProfile(): SelfProfile
 
-    @GET("/v1/{type}/recommended?include_ranking_illusts=true&include_privacy_policy=true&filter=for_ios")
+    @GET("/v2/novel/series")
+    suspend fun getNovelSeries(
+        @Query("series_id") series_id: Long,
+        @Query("last_order") last_order: Int? = null,
+    ): NovelSeriesResp
+
+    @GET("/v1/illust/series")
+    suspend fun getIllustSeries(
+        @Query("illust_series_id") series_id: Long,
+        @Query("last_order") last_order: Int? = null,
+    ): IllustSeriesResp
+
+    @GET("/v1/illust/detail")
+    suspend fun getIllust(
+        @Query("illust_id") illust_id: Long
+    ): SingleIllustResponse
+
+    @GET("/v2/novel/detail")
+    suspend fun getNovel(
+        @Query("novel_id") novel_id: Long
+    ): SingleNovelResponse
+
+    @GET("/v2/illust/related")
+    suspend fun getRelatedIllusts(
+        @Query("illust_id") illust_id: Long,
+    ): IllustResponse
+
+    @GET("/v1/walkthrough/illusts")
+    suspend fun getWalkthroughWorks(): IllustResponse
+
+    @GET("/v1/{type}/recommended?include_ranking_illusts=false&include_privacy_policy=true&filter=for_ios")
     suspend fun getHomeData(
         @Path("type") type: String,
     ): HomeIllustResponse
+
+    @GET("/v1/novel/recommended")
+    suspend fun getRecmdNovels(
+        @Query("include_ranking_illusts") include_ranking_illusts: Boolean = false,
+    ): NovelResponse
+
+    @GET("/webview/v2/novel")
+    suspend fun getNovelText(@Query("id") id: Long): ResponseBody
 
     @GET("/v1/user/illusts?filter=for_ios")
     suspend fun getUserCreatedIllusts(
@@ -59,11 +160,36 @@ interface API {
         @Query("type") type: String,
     ): IllustResponse
 
-    @GET("/v1/user/bookmarks/illust?filter=for_ios&restrict=public")
+    @GET("/v1/user/bookmarks/illust?filter=for_ios")
     suspend fun getUserBookmarkedIllusts(
         @Query("user_id") user_id: Long,
+        @Query("restrict") restrict: String,
     ): IllustResponse
 
+
+    @GET("/v1/user/bookmarks/novel?filter=for_ios")
+    suspend fun getUserBookmarkedNovels(
+        @Query("user_id") user_id: Long,
+        @Query("restrict") restrict: String,
+    ): NovelResponse
+
+    @GET("/v1/user/novels")
+    suspend fun getUserCreatedNovels(
+        @Query("user_id") user_id: Long,
+    ): NovelResponse
+
+    @GET("/v1/novel/follow")
+    suspend fun getFollowingCreatedNovels(
+        @Query("restrict") restrict: String,
+    ): NovelResponse
+
+    @GET("/v1/novel/new")
+    suspend fun getLatestNovels(): NovelResponse
+
+    @GET("/v1/illust/new?filter=for_ios")
+    suspend fun getLatestIllustManga(
+        @Query("content_type") content_type: String,
+    ): IllustResponse
 
     @GET("/v2/user/detail?filter=for_ios")
     suspend fun getUserProfile(
@@ -76,13 +202,43 @@ interface API {
         @Query("restrict") restrict: String,
     ): UserPreviewResponse
 
+
+    @GET("/v1/notification/list")
+    suspend fun getNotifications(): NotificationResponse
+
+    @GET("/v1/notification/view-more")
+    suspend fun getViewMoreNotifications(@Query("notification_id") notification_id: Long): NotificationResponse
+
+    @GET("/v1/user/follower?filter=for_ios")
+    suspend fun getUserFans(
+        @Query("user_id") user_id: Long,
+    ): UserPreviewResponse
+
+    @GET("/v1/user/mypixiv")
+    suspend fun getUserPixivFriends(
+        @Query("user_id") user_id: Long,
+    ): UserPreviewResponse
+
+    @GET("/v2/{type}/follow")
+    suspend fun followUserPosts(
+        @Path("type") type: String,
+        @Query("restrict") restrict: String,
+    ): IllustResponse
+
     @GET("/v1/user/recommended?filter=for_ios")
     suspend fun recommendedUsers(): UserPreviewResponse
 
+    // /v1/illust/ranking?mode=day_manga&filter=for_ios
     @GET("/v1/illust/ranking?filter=for_ios")
     suspend fun getRankingIllusts(
         @Query("mode") mode: String,
+        @Query("date") date: String? = null,
     ): IllustResponse
+
+    @GET("/v1/ugoira/metadata")
+    suspend fun getGifPackage(
+        @Query("illust_id") illust_id: Long,
+    ): GifResponse
 
     @GET("/v1/search/popular-preview/illust?search_ai_type=0&filter=for_ios")
     suspend fun popularPreview(
@@ -93,6 +249,20 @@ interface API {
         @Query("include_translated_tag_results") include_translated_tag_results: Boolean,
     ): IllustResponse
 
+    @GET("/v1/search/popular-preview/novel?search_ai_type=0&filter=for_ios")
+    suspend fun popularPreviewNovel(
+        @Query("word") word: String,
+        @Query("sort") sort: String,
+        @Query("search_target") search_target: String,
+        @Query("merge_plain_keyword_results") merge_plain_keyword_results: Boolean,
+        @Query("include_translated_tag_results") include_translated_tag_results: Boolean,
+    ): NovelResponse
+
+    @GET("/v1/spotlight/articles?filter=for_ios")
+    suspend fun pixivsionArticles(
+        @Query("category") category: String,
+    ): ArticlesResponse
+
     @GET("/v1/search/illust?search_ai_type=0&filter=for_ios")
     suspend fun searchIllustManga(
         @Query("word") word: String,
@@ -101,6 +271,15 @@ interface API {
         @Query("merge_plain_keyword_results") merge_plain_keyword_results: Boolean,
         @Query("include_translated_tag_results") include_translated_tag_results: Boolean,
     ): IllustResponse
+
+    @GET("/v1/search/novel?search_ai_type=0&filter=for_ios")
+    suspend fun searchNovel(
+        @Query("word") word: String,
+        @Query("sort") sort: String,
+        @Query("search_target") search_target: String,
+        @Query("merge_plain_keyword_results") merge_plain_keyword_results: Boolean,
+        @Query("include_translated_tag_results") include_translated_tag_results: Boolean,
+    ): NovelResponse
 
 
     @GET("/v1/search/user?filter=for_ios")

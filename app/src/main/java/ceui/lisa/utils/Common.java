@@ -107,15 +107,13 @@ public class Common {
 
     public static void logOut(Context context, boolean deleteUser) {
         if (Shaft.sUserModel != null) {
-            if (!Dev.isDev) { //测试状态，不要真的退出登录，只是跳转到登录页面
-                Shaft.sUserModel.getUser().setIs_login(false);
-                Local.saveUser(Shaft.sUserModel);
-                if(deleteUser){
-                    UserEntity userEntity = new UserEntity();
-                    userEntity.setUserID(Shaft.sUserModel.getUserId());
-                    AppDatabase.getAppDatabase(context)
-                            .downloadDao().deleteUser(userEntity);
-                }
+            Shaft.sUserModel.getUser().setIs_login(false);
+            Local.saveUser(Shaft.sUserModel);
+            if(deleteUser){
+                UserEntity userEntity = new UserEntity();
+                userEntity.setUserID(Shaft.sUserModel.getUserId());
+                AppDatabase.getAppDatabase(context)
+                        .downloadDao().deleteUser(userEntity);
             }
             Intent intent = new Intent(context, TemplateActivity.class);
             intent.putExtra(TemplateActivity.EXTRA_FRAGMENT, "登录注册");
@@ -125,7 +123,7 @@ public class Common {
     }
 
     public static <T> void showLog(T t) {
-        Log.d("==SHAFT== log ==> ", String.valueOf(t));
+        Log.d("==SHAFT==>", String.valueOf(t));
     }
 
     public static <T> void showToast(T t) {
@@ -457,6 +455,14 @@ public class Common {
             return ContextCompat.getColor(Shaft.getContext(), R.color.white);
         }
         return color;
+    }
+
+    public static int getNovelTextSize() {
+        int size = Shaft.sSettings.getNovelHolderTextSize();
+        if (size == 0) {
+            return 16;  // 默认大小
+        }
+        return size;
     }
 
     /**

@@ -3,16 +3,74 @@ package ceui.pixiv.ui.search
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.asFlow
+import androidx.lifecycle.viewModelScope
+import ceui.lisa.database.AppDatabase
+import ceui.loxia.Client
 import ceui.loxia.Event
+import ceui.loxia.ObjectType
+import ceui.loxia.SearchSuggestionResponse
+import ceui.loxia.Tag
+import ceui.pixiv.db.RecordType
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.launch
 
-class SearchViewModel(initialKeyword: String) : ViewModel() {
+class SearchViewModel(
+    showSuggestion: Boolean,
+    initialKeyword: String,
+    database: AppDatabase
+) : ViewModel() {
 
-    val keywords = MutableLiveData<String>()
+
+    val tagList = MutableLiveData<List<Tag>>()
+
+    val illustSelectedRadioTabIndex = MutableLiveData(0)
+    val novelSelectedRadioTabIndex = MutableLiveData(0)
+
+    val inputDraft = MutableLiveData("")
+
+    private val _searchSuggestion = MutableLiveData<SearchSuggestionResponse>()
+    val searchSuggestion: LiveData<SearchSuggestionResponse> = _searchSuggestion
+
+    val historyLiveData = database.generalDao()
+        .getAllByRecordTypeLiveData(
+            RecordType.VIEW_TAG_HISTORY
+        )
+
 
     init {
         if (initialKeyword.isNotEmpty()) {
-            keywords.value = initialKeyword
+            tagList.value = listOf(Tag(initialKeyword))
         }
+
+        if (showSuggestion) {
+            viewModelScope.launch {
+                inputDraft.asFlow()
+                    .debounce(500)
+                    .distinctUntilChanged()
+                    .filter { it?.isNotEmpty() == true }
+                    .collectLatest { word ->
+                        try {
+                            _searchSuggestion.value = Client.appApi.getSearchSuggestions(true, word)
+                        } catch (ex: Exception) {
+
+                        }
+                    }
+            }
+
+            viewModelScope.launch {
+                inputDraft.asFlow()
+                    .distinctUntilChanged()
+                    .filter { it.isNullOrEmpty() }
+                    .collectLatest {
+                        _searchSuggestion.value = SearchSuggestionResponse()
+                    }
+            }
+        }
+
     }
 
     private val _searchIllustMangaEvent = MutableLiveData<Event<Long>>()
@@ -44,5 +102,41 @@ class SearchViewModel(initialKeyword: String) : ViewModel() {
         triggerSearchIllustMangaEvent(now)
         triggerSearchUserEvent(now)
         triggerSearchNovelEvent(now)
+    }
+
+    fun buildSearchConfig(usersYori: Int?, objectType: String): SearchConfig {
+        val tabIndex = if (objectType == ObjectType.ILLUST) {
+            illustSelectedRadioTabIndex.value ?: 0
+        } else {
+            novelSelectedRadioTabIndex.value ?: 0
+        }
+        val sort = when (tabIndex) {
+            0 -> {
+                SortType.POPULAR_PREVIEW
+            }
+
+            1 -> {
+                SortType.DATE_DESC
+            }
+
+            2 -> {
+                SortType.DATE_ASC
+            }
+
+            else -> {
+                SortType.POPULAR_DESC
+            }
+        }
+        val yoriString = if ((usersYori ?: 0) > 0) {
+            "${usersYori}users入り"
+        } else {
+            ""
+        }
+        return SearchConfig(
+            keyword = tagList.value?.map { it.name }?.joinToString(separator = " ") ?: "",
+            usersYori = yoriString,
+            search_target = if (yoriString.isNotEmpty()) "exact_match_for_tags" else "partial_match_for_tags",
+            sort = sort,
+        )
     }
 }

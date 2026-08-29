@@ -1,17 +1,14 @@
 package ceui.pixiv.ui.common
 
-import android.content.Context
 import android.os.Bundle
 import android.view.View
 import androidx.core.view.isVisible
 import androidx.navigation.fragment.navArgs
 import ceui.lisa.R
 import ceui.lisa.databinding.FragmentImgUrlBinding
-import ceui.pixiv.ui.task.LoadTask
-import ceui.pixiv.ui.task.NamedUrl
-import ceui.refactor.viewBinding
 import com.github.panpf.zoomimage.SketchZoomImageView
 import com.google.android.material.progressindicator.CircularProgressIndicator
+
 
 class ImgUrlFragment : ImgDisplayFragment(R.layout.fragment_img_url) {
 
@@ -26,6 +23,10 @@ class ImgUrlFragment : ImgDisplayFragment(R.layout.fragment_img_url) {
 
     override fun displayName(): String {
         return args.displayName
+    }
+
+    override fun contentUrl(): String {
+        return args.url
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -47,9 +48,5 @@ class ImgUrlFragment : ImgDisplayFragment(R.layout.fragment_img_url) {
                 binding.toolbarLayout
             )
         }
-
-        val context = requireContext()
-        val task = viewModel.loadNamedUrl(NamedUrl(displayName(), args.url), requireContext())
-        setUpLoadTask(context, task)
     }
 }

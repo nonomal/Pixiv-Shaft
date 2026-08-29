@@ -1,12 +1,9 @@
 package ceui.loxia
 
-import ceui.lisa.activities.Shaft
 import ceui.lisa.http.AccountTokenApi
-import ceui.lisa.http.HttpDns
-import ceui.lisa.http.RubySSLSocketFactory
-import ceui.lisa.http.pixivOkHttpClient
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
+import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
@@ -17,16 +14,22 @@ object Client {
 
     private var _appApi: API? = null
 
-    val appApi: API get() {
-        val _api = _appApi
-        return if (_api != null) {
-            _api
-        } else {
-            val impl = clientManager.createAPPAPI(API::class.java)
-            _appApi = impl
-            impl
+    val appApi: API
+        get() {
+            val _api = _appApi
+            return if (_api != null) {
+                _api
+            } else {
+                val impl = clientManager.createAPPAPI(API::class.java)
+                _appApi = impl
+                impl
+            }
         }
-    }
+
+    val shaftClient: OkHttpClient
+        get() {
+            return clientManager.shaftClient
+        }
 
     fun reset() {
         _appApi = null
@@ -35,6 +38,10 @@ object Client {
 
     val authApi: AccountTokenApi by lazy {
         clientManager.createOAuthAPI(AccountTokenApi::class.java)
+    }
+
+    val webApi: PixivWebApi by lazy {
+        clientManager.createWebAPIService(PixivWebApi::class.java)
     }
 }
 
@@ -57,46 +64,86 @@ class ClientManager {
 
         const val HEADER_AUTH = "authorization"
 
-        const val REQUIEST_TIME = 10L
+        const val REQUIEST_TIME = 5L
 
         const val TOKEN_ERROR_1 = "Error occurred at the OAuth process"
         const val TOKEN_ERROR_2 = "Invalid refresh token"
     }
 
-    fun <T> createAPPAPI(service: Class<T>): T {
-        val httpBuilder = OkHttpClient.Builder()
+    private var _shaftClient: OkHttpClient? = null
+    val shaftClient: OkHttpClient
+        get() {
+            val theClient = _shaftClient
+            if (theClient != null) {
+                return theClient
+            }
+
+            return appClient().also {
+                _shaftClient = it
+            }
+        }
+
+    private fun appClient(): OkHttpClient {
+        val okhttpClientBuilder = OkHttpClient.Builder()
             .connectTimeout(REQUIEST_TIME, TimeUnit.SECONDS)
             .writeTimeout(REQUIEST_TIME, TimeUnit.SECONDS)
             .readTimeout(REQUIEST_TIME, TimeUnit.SECONDS)
             .protocols(listOf(Protocol.HTTP_1_1))
 
-        if (Shaft.sSettings.isAutoFuckChina) {
-            httpBuilder.sslSocketFactory(RubySSLSocketFactory(), pixivOkHttpClient())
-            httpBuilder.dns(HttpDns.getInstance())
-        }
+        okhttpClientBuilder.addInterceptor(HeaderInterceptor(true))
+        okhttpClientBuilder.addInterceptor(TokenFetcherInterceptor())
+        okhttpClientBuilder.addInterceptor(HttpLoggingInterceptor().apply {
+            setLevel(HttpLoggingInterceptor.Level.BODY)
+        })
 
-        httpBuilder.addInterceptor(HeaderInterceptor())
-        httpBuilder.addInterceptor(TokenFetcherInterceptor())
+        return okhttpClientBuilder.build()
+    }
 
+    fun <T> createAPPAPI(service: Class<T>): T {
         return Retrofit.Builder()
             .baseUrl(APP_API_HOST)
             .addConverterFactory(GsonConverterFactory.create())
-            .client(httpBuilder.build())
+            .client(shaftClient)
             .build()
             .create(service)
     }
 
     fun <T> createOAuthAPI(service: Class<T>): T {
+        val okhttpClientBuilder = OkHttpClient.Builder()
+            .connectTimeout(REQUIEST_TIME, TimeUnit.SECONDS)
+            .writeTimeout(REQUIEST_TIME, TimeUnit.SECONDS)
+            .readTimeout(REQUIEST_TIME, TimeUnit.SECONDS)
+            .protocols(listOf(Protocol.HTTP_1_1))
+
+        okhttpClientBuilder.addInterceptor(HeaderInterceptor(false))
+        okhttpClientBuilder.addInterceptor(HttpLoggingInterceptor().apply {
+            setLevel(HttpLoggingInterceptor.Level.BODY)
+        })
+        okhttpClientBuilder.addInterceptor(HttpLoggingInterceptor().apply {
+            setLevel(HttpLoggingInterceptor.Level.BODY)
+        })
+
+        return Retrofit.Builder()
+            .baseUrl(OAUTH_HOST)
+            .addConverterFactory(GsonConverterFactory.create())
+            .client(okhttpClientBuilder.build())
+            .build()
+            .create(service)
+    }
+
+    fun <T> createWebAPIService(service: Class<T>): T {
         val httpBuilder = OkHttpClient.Builder()
             .connectTimeout(REQUIEST_TIME, TimeUnit.SECONDS)
             .writeTimeout(REQUIEST_TIME, TimeUnit.SECONDS)
             .readTimeout(REQUIEST_TIME, TimeUnit.SECONDS)
             .protocols(listOf(Protocol.HTTP_1_1))
 
-        httpBuilder.addInterceptor(HeaderInterceptor())
-
+        httpBuilder.addInterceptor(WebHeaderInterceptor())
+        httpBuilder.addInterceptor(HttpLoggingInterceptor().apply {
+            setLevel(HttpLoggingInterceptor.Level.BODY)
+        })
         return Retrofit.Builder()
-            .baseUrl(OAUTH_HOST)
+            .baseUrl(WEB_API_HOST)
             .addConverterFactory(GsonConverterFactory.create())
             .client(httpBuilder.build())
             .build()

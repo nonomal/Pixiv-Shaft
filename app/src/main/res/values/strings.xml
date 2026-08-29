@@ -1,5 +1,4 @@
 <resources>
-    <string name="app_name">Shaft</string>
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
     <string name="nav_header_title">Android Studio</string>
@@ -111,6 +110,7 @@
     <string name="user_collections">收藏夹</string>
     <string name="download_manager">下载管理</string>
     <string name="recommend_illust">推荐作品</string>
+    <string name="illust_grid_widget_label">插画推荐</string>
     <string name="recommend_novel">推荐小说</string>
     <string name="novel_tag">小说标签</string>
     <string name="hot_tag">热门标签</string>
@@ -197,6 +197,9 @@
     <string name="read_latest_episode">阅读最新话</string>
     <string name="watchlist">追更列表</string>
     <string name="episode_number">%d话</string>
+    <string name="add_to_watchlist">加入追更列表</string>
+    <string name="already_in_your_watchlist">已加入追更列表</string>
+    <string name="read_latest_episode_with_num">阅读最新一话(#%1$d)</string>
 
 
     <string name="string_1">屏蔽设置</string>
@@ -484,7 +487,7 @@
     <string name="string_298">默认模式（跟随系统）</string>
     <string name="string_299">白天模式（浅色）</string>
     <string name="string_300">黑暗模式（深色）</string>
-    <string name="string_310">使用Shaft查看</string>
+    <string name="string_310">使用Shaft继续</string>
     <string name="string_311">Shaft以图搜源</string>
     <string name="string_312">前往设定</string>
     <string name="string_313">下载文件不需要请求权限，但是需要设定保存文件的目录文件夹</string>
@@ -611,7 +614,7 @@
     <string name="string_429">正在加载</string>
     <string name="string_430">关键词搜索</string>
     <string name="string_431">搜索</string>
-    <string name="string_432">画师</string>
+    <string name="string_432">作者</string>
     <string name="string_64_1">热度排序(非会员仅显示部分)</string>
     <string name="string_433">按热度排序去哪儿了？</string>
     <string name="string_434">热度排序现在位于右边滑动栏的搜索选项/排序方式中，你可以通过右上角的设置键进行设置，设置完毕后请保存。</string>
@@ -689,8 +692,86 @@
     <string name="theme_nowUsing">（正在使用）</string>
     <string name="core_string_novel_marker">小说书签</string>
     <string name="toast_download_result">下载完成App内提示</string>
-    <string name="title_activity_home">HomeActivity</string>
-    <string name="title_home">Home</string>
+    <string name="title_activity_home" translatable="false">HomeActivity</string>
+    <string name="title_home" translatable="false">Home</string>
     <string name="show_reply">查看回复</string>
     <string name="comments">评论</string>
+    <string name="new_tag">New Tag</string>
+    <string name="date_minute_plurals_zero" platforms="all" synced="58038e" targets="widget,app">Just now</string>
+    <plurals name="date_hour" platforms="all" synced_one="f9ed7d" synced_other="56508e" targets="widget,app">
+        <item quantity="one">%d hour ago</item>
+        <item quantity="other">%d hours ago</item>
+    </plurals>
+    <plurals name="recent_visits_date_minute" platforms="all" synced_one="ff2e35" synced_other="9085a0" targets="widget,app">
+        <item quantity="one">%d minute ago</item>
+        <item quantity="other">%d minutes ago</item>
+    </plurals>
+    <plurals name="date_day" platforms="all" synced_one="ece421" synced_other="2ed691" targets="widget,app">
+        <item quantity="one">%d day ago</item>
+        <item quantity="other">%d days ago</item>
+    </plurals>
+    <string name="type_user">用户</string>
+    <string name="add_keyword">添加关键字</string>
+    <string name="my_bookmarked_illusts">收藏的插画漫画</string>
+    <string name="my_bookmarked_novels">收藏的小说</string>
+    <string name="pixivision_articles">Pixivision Articles</string>
+    <string name="button_ok">OK</string>
+    <string name="created_tasks">创建的任务</string>
+    <string name="not_selected">未选择</string>
+    <string name="related_artworks">相关作品</string>
+    <string name="qq_group_5">五群</string>
+    <string name="qq_group_6">六群</string>
+    <string name="cookie_sync_has_been_done">已完成同步</string>
+    <string name="cookie_was_not_synced">未同步</string>
+    <string name="sync_cookies_with_pixiv_net">Pixiv 主站同步</string>
+    <string name="can_use_web_features_after_sync">同步主站 Cookies 可以使用 web 端功能</string>
+    <string name="view_and_artworks_display">浏览与显示</string>
+    <string name="handle_r18g_displaying">设置是否显示 R-18(G) 内容</string>
+    <string name="country_and_region">国家和地区</string>
+    <string name="handle_content_language">设置内容展示语言</string>
+    <string name="published_on">发布于: %1$s</string>
+    <string name="remove_blocking">取消屏蔽作品</string>
+    <string name="remove_user_blocking">取消屏蔽用户</string>
+    <string name="add_blocking">屏蔽作品</string>
+    <string name="view_comments">查看评论</string>
+    <string name="flag_artwork">举报作品</string>
+    <string name="string_font_size">字体大小</string>
+    <string name="novel_series">小说系列</string>
+    <string name="total_works_count">系列中包含%1$d个作品</string>
+    <string name="download_all_artworks">下载系列全部作品</string>
+    <string name="turn_on_v5_ui">体验新版UI(公测中)</string>
+    <string name="use_new_ui">体验新版</string>
+    <string name="turn_off_v5_ui">切换为旧版UI</string>
+    <string name="new_ui_desc">全新UI已经准备就绪，功能也接近移植完成，开始先行体验吧！！（新版暂未支持直连，需要自备梯子，可以自由切换回老版本）</string>
+    <string name="alert_when_turn_off_v5_ui">确认切换为旧版UI吗</string>
+    <string name="blocking_list">屏蔽列表</string>
+    <string name="change_language_confirm">确定使用 %1$s 作为应用内语言吗?</string>
+    <string name="how_many_words">%1$s个字</string>
+    <string name="search_by_keyword">关键字搜索</string>
+    <string name="search_by_id_or_word">请输入ID或关键字</string>
+    <string name="all_works_count">共%1$d个作品</string>
+    <string name="chat_with_him">私信</string>
+    <string name="download_all_created_novels">下载此作者的全部作品</string>
+    <string name="browse_history">浏览历史</string>
+    <string name="artwork_link">作品链接：%1$s</string>
+    <string name="user_link">作者链接：%1$s</string>
+    <string name="landing_start">开始</string>
+    <string name="the_latest_pixiv_artworks">平台最新作品</string>
+    <string name="created_by_me_artworks">我创作的作品</string>
+    <string name="log_in_with_token">Log In With Token</string>
+    <string name="export_refresh_token">导出 Refresh Token</string>
+    <string name="export_logged_in_user_json">导出当前登录用户 JSON</string>
+    <string name="landing_log_in">Log In</string>
+    <string name="landing_sign_up">Sign Up</string>
+    <string name="app_background">背景图</string>
+    <string name="rank_select_date">Select Date</string>
+    <string name="rank_clear_date">Clear Date</string>
+    <string name="background_specified_illust">指定的插画作品</string>
+    <string name="background_chosen_from_gallary">从相册选择</string>
+    <string name="background_random_from_favorites">从我的收藏随机</string>
+    <string name="twice_back_will_close_app">再次返回退出软件</string>
+    <string name="no_internet_connection">无网络连接</string>
+    <string name="enable_vpn">Enable VPN</string>
+    <string name="parse_link">解析链接</string>
+    <string name="prime_tags">热度标签</string>
 </resources>

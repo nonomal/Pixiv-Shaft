@@ -3,44 +3,32 @@ package ceui.pixiv.ui.trending
 import android.os.Bundle
 import android.view.View
 import androidx.navigation.fragment.navArgs
-import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.LinearLayoutManager
 import ceui.lisa.R
-import ceui.lisa.databinding.FragmentPixivListBinding
-import ceui.loxia.Client
+import ceui.lisa.databinding.FragmentPagedListBinding
 import ceui.loxia.ObjectPool
 import ceui.loxia.TrendingTag
-import ceui.loxia.TrendingTagsResponse
-import ceui.loxia.pushFragment
-import ceui.pixiv.ui.common.CommonAdapter
-import ceui.pixiv.ui.common.DataSource
-import ceui.pixiv.ui.common.IllustCardHolder
+import ceui.pixiv.paging.pagingViewModel
+import ceui.pixiv.ui.common.ListMode
 import ceui.pixiv.ui.common.PixivFragment
-import ceui.pixiv.ui.common.setUpRefreshState
-import ceui.pixiv.ui.common.setUpStaggerLayout
-import ceui.pixiv.ui.list.pixivListViewModel
-import ceui.pixiv.ui.search.SearchViewPagerFragment
-import ceui.pixiv.ui.search.SearchViewPagerFragmentArgs
-import ceui.refactor.viewBinding
+import ceui.pixiv.ui.common.setUpPagedList
+import ceui.pixiv.ui.common.viewBinding
 
-class TrendingTagsFragment : PixivFragment(R.layout.fragment_pixiv_list), TrendingTagActionReceiver {
+class TrendingTagsFragment : PixivFragment(R.layout.fragment_paged_list),
+    TrendingTagActionReceiver {
 
-    private val binding by viewBinding(FragmentPixivListBinding::bind)
-    private val args by navArgs<TrendingTagsFragmentArgs>()
-    private val viewModel by pixivListViewModel {
-        TrendingTagsDataSource(args)
+    private val binding by viewBinding(FragmentPagedListBinding::bind)
+    private val safeArgs by navArgs<TrendingTagsFragmentArgs>()
+    private val viewModel by pagingViewModel({ safeArgs.objectType }) { objectType ->
+        TrendingTagsRepository(objectType)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        setUpRefreshState(binding, viewModel)
-        binding.listView.layoutManager = GridLayoutManager(requireContext(), 3)
+        setUpPagedList(binding, viewModel, ListMode.GRID)
     }
 
     override fun onClickTrendingTag(trendingTag: TrendingTag) {
-        pushFragment(R.id.navigation_search_viewpager, SearchViewPagerFragmentArgs(
-            keyword = trendingTag.tag ?: "",
-        ).toBundle())
+        onClickTag(trendingTag.buildTag(), safeArgs.objectType)
     }
 
     override fun onLongClickTrendingTag(trendingTag: TrendingTag) {

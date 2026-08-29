@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<resources xmlns:tools="http://schemas.android.com/tools">  
-  <string name="app_name">PixShaft</string>  
-  <string name="navigation_drawer_open">Open navigation drawer</string>  
+<resources xmlns:tools="http://schemas.android.com/tools">
+  <string name="navigation_drawer_open">Open navigation drawer</string>
   <string name="navigation_drawer_close">Close navigation drawer</string>  
   <string name="nav_header_title">Android Studio</string>  
   <string name="nav_header_subtitle">android.studio@android.com</string>  
@@ -174,7 +173,10 @@
   <string name="read_latest_episode">Read latest episode</string>
   <string name="watchlist">Watchlist</string>
   <string name="episode_number">%d ep</string>
-  <string name="string_1">Mask Setting</string>  
+  <string name="add_to_watchlist">Add to Watchlist</string>
+  <string name="already_in_your_watchlist">Already in your Watchlist</string>
+  <string name="read_latest_episode_with_num">Read the latest chapter (#%1$d)</string>
+  <string name="string_1">Mask Setting</string>
   <string name="string_2">Developer Preview</string>  
   <string name="string_3">share</string>  
   <string name="string_4">+ Follow</string>  
@@ -636,4 +638,5 @@
   <string name="follow">Follow</string>
   <string name="unfollow">UnFollow</string>
   <string name="core_string_novel_marker">Markers</string>
+  <string name="string_font_size">Font size</string>
 </resources>

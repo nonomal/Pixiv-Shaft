@@ -4,20 +4,27 @@ import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.findFragment
+import androidx.fragment.app.setFragmentResult
+import androidx.fragment.app.setFragmentResultListener
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.RecyclerView
 import ceui.lisa.R
+import ceui.pixiv.utils.TokenGenerator
+import ceui.pixiv.widgets.alertYesOrCancel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import kotlin.reflect.KClass
+import timber.log.Timber
+import java.io.Serializable
 
-inline fun<reified InterfaceT> Fragment.sendAction(action: (receiver: InterfaceT)->Boolean) {
+inline fun <reified InterfaceT> Fragment.sendAction(action: (receiver: InterfaceT) -> Boolean) {
     var received = false
     var itr: Fragment? = this
     while (itr != null) {
         val receiver = itr as? InterfaceT
-        if (receiver != null  && action(receiver)) {
+        if (receiver != null && action(receiver)) {
             received = true
             break
         } else {
@@ -33,7 +40,7 @@ inline fun<reified InterfaceT> Fragment.sendAction(action: (receiver: InterfaceT
     }
 }
 
-inline fun<reified InterfaceT> View.sendAction(action: (receiver: InterfaceT)->Boolean) {
+inline fun <reified InterfaceT> View.sendAction(action: (receiver: InterfaceT) -> Boolean) {
     val fragment = this.findFragment<Fragment>()
     fragment.sendAction<InterfaceT>(action)
 }
@@ -43,36 +50,58 @@ fun Fragment.launchSuspend(block: suspend CoroutineScope.() -> Unit) {
         try {
             block()
         } catch (ex: Exception) {
-            ex.printStackTrace()
+            if (ex is CancellationException) throw ex
+            context?.let {
+                alertYesOrCancel(ex.getHumanReadableMessage(it))
+            }
+            Timber.e(ex)
         }
     }
 }
 
-fun Fragment.launchSuspend(sender: ProgressTextButton, block: suspend CoroutineScope.() -> Unit) {
+fun Fragment.launchSpinner(block: suspend CoroutineScope.() -> Unit) {
+    viewLifecycleOwnerLiveData.value?.lifecycleScope?.launch {
+        val dialog = LoadingDialog.show(this@launchSpinner)
+        try {
+            block()
+            try {
+                dialog.dismissAllowingStateLoss()
+            } catch (e: Exception) {
+                Timber.e(e)
+            }
+        } catch (ex: Exception) {
+            try {
+                dialog.dismissAllowingStateLoss()
+            } catch (e: Exception) {
+                Timber.e(e)
+            }
+            if (ex is CancellationException) throw ex
+            context?.let {
+                alertYesOrCancel(ex.getHumanReadableMessage(it))
+            }
+            Timber.e(ex)
+        }
+    }
+}
+
+
+fun Fragment.launchSuspend(sender: ProgressIndicator, block: suspend CoroutineScope.() -> Unit) {
     viewLifecycleOwnerLiveData.value?.lifecycleScope?.launch {
         try {
             sender.showProgress()
             block()
         } catch (ex: Exception) {
-            ex.printStackTrace()
+            if (ex is CancellationException) throw ex
+            context?.let {
+                alertYesOrCancel(ex.getHumanReadableMessage(it))
+            }
+            Timber.e(ex)
         } finally {
             sender.hideProgress()
         }
     }
 }
 
-fun Fragment.launchSuspend(sender: ProgressImageButton, block: suspend CoroutineScope.() -> Unit) {
-    viewLifecycleOwnerLiveData.value?.lifecycleScope?.launch {
-        try {
-            sender.showProgress(true)
-            block()
-        } catch (ex: Exception) {
-            ex.printStackTrace()
-        } finally {
-            sender.showProgress(false)
-        }
-    }
-}
 
 fun NavOptions.Builder.setHorizontalSlide(): NavOptions.Builder {
     return setEnterAnim(R.anim.h_slide_enter)
@@ -105,6 +134,43 @@ fun Fragment.pushFragment(id: Int, bundle: Bundle? = null) {
     )
 }
 
+inline fun <reified T : Serializable> Fragment.pushFragmentForResult(
+    id: Int,
+    bundle: Bundle? = null,
+    crossinline onResult: (T) -> Unit
+) {
+    val requestKey = TokenGenerator.generateToken()
+
+    // 监听结果
+    setFragmentResultListener(requestKey) { _, result ->
+        val data = result.getSerializable("result-${requestKey}") as? T
+        if (data != null) {
+            onResult(data)
+        }
+    }
+
+    // 传递 requestKey 给下一个 Fragment
+    val args = (bundle ?: Bundle()).apply {
+        putString("requestKey", requestKey)
+    }
+
+    findNavController().navigate(
+        id,
+        args,
+        NavOptions.Builder().setHorizontalSlide().build()
+    )
+}
+
+// 下一个 Fragment 调用这个方法返回数据
+inline fun <reified T : Serializable> Fragment.setResultAndPop(result: T) {
+    val key = arguments?.getString("requestKey") ?: return
+    setFragmentResult(
+        key,
+        Bundle().apply { putSerializable("result-${key}", result) }
+    )
+    findNavController().popBackStack()
+}
+
 fun Fragment.fadeInFragment(id: Int, bundle: Bundle? = null) {
     findNavController().navigate(
         id,
@@ -128,14 +194,20 @@ inline fun <reified ActionReceiverT> Fragment.findActionReceiverOrNull(): Action
 }
 
 
-inline fun<reified ActionReceiverT> View.findActionReceiverOrNull(): ActionReceiverT? {
+inline fun <reified ActionReceiverT> View.findActionReceiverOrNull(): ActionReceiverT? {
     val fragment = this.findFragmentOrNull<Fragment>()
     return fragment?.findActionReceiverOrNull<ActionReceiverT>()
 }
 
-inline fun<reified ActionReceiverT> View.findActionReceiver(): ActionReceiverT {
+inline fun <reified ActionReceiverT> View.findActionReceiver(): ActionReceiverT {
     val fragment = this.findFragment<Fragment>()
     return fragment.findActionReceiverOrNull<ActionReceiverT>()!!
+}
+
+fun <T : RecyclerView> T.clearItemDecorations() {
+    while (itemDecorationCount > 0) {
+        removeItemDecorationAt(0)
+    }
 }
 
 inline fun <reified F : Fragment> View.findFragmentOrNull(): F? {
@@ -146,5 +218,13 @@ inline fun <reified F : Fragment> View.findFragmentOrNull(): F? {
         } else null
     } catch (e: Exception) {
         null
+    }
+}
+
+inline fun <reified T : Fragment> Fragment.findAncestorOrSelf(): T? {
+    if (this is T) {
+        return this
+    } else {
+        return findAncestor()
     }
 }

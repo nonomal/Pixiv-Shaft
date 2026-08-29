@@ -2,145 +2,78 @@ package ceui.loxia
 
 import android.content.Context
 import androidx.core.view.isVisible
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LiveData
-import androidx.recyclerview.widget.RecyclerView
 import ceui.lisa.R
+import ceui.lisa.activities.Shaft
 import ceui.lisa.databinding.ItemLoadingBinding
-import ceui.pixiv.ui.common.CommonAdapter
-import ceui.refactor.setOnClick
-import com.scwang.smart.refresh.header.FalsifyFooter
-import com.scwang.smart.refresh.header.MaterialHeader
-import com.scwang.smart.refresh.layout.SmartRefreshLayout
+import ceui.pixiv.ui.common.PixivFragment
+import ceui.pixiv.utils.setOnClick
+import retrofit2.HttpException
+import timber.log.Timber
 import java.io.Serializable
-import java.lang.Exception
 import java.net.SocketTimeoutException
-import java.net.UnknownHostException
 import java.util.concurrent.TimeoutException
 import javax.net.ssl.SSLHandshakeException
 
-sealed class RefreshState: Serializable {
-    data class LOADING(val title: String = "", val refreshHint: RefreshHint? = null) : RefreshState()
+sealed class RefreshState : Serializable {
+    data class LOADING(val title: String = "", val refreshHint: RefreshHint? = null) :
+        RefreshState()
+
+    data class FETCHING_LATEST(val hasContent: Boolean = true) : RefreshState()
     data class LOADED(val hasContent: Boolean = true, val hasNext: Boolean = true) : RefreshState()
     data class ERROR(val exception: Exception, val isInitialLoad: Boolean = false) : RefreshState()
 }
 
-data class RefreshHint(
-    val cause: Cause
-) {
-    enum class Cause {
-        PULL_TO_REFRESH,
-        INITIAL_LOAD,
-        LOAD_MORE,
-    }
-
-    companion object {
-        fun pullToRefresh(): RefreshHint {
-            return RefreshHint(Cause.PULL_TO_REFRESH)
-        }
-
-        fun initialLoad(): RefreshHint {
-            return RefreshHint(Cause.INITIAL_LOAD)
-        }
-
-        fun loadMore(): RefreshHint {
-            return RefreshHint(Cause.LOAD_MORE)
-        }
-    }
-}
-
-inline fun <reified FragmentT : SlinkyListFragment> FragmentT.setUpSlinkyList(
-    listView: RecyclerView,
-    refreshLayout: SmartRefreshLayout,
-    itemLoading: ItemLoadingBinding,
-    viewModel: SlinkyListViewModel<FragmentT>
-) {
-    val adapter = CommonAdapter(viewLifecycleOwner)
-    listView.adapter = adapter
-    viewModel.holderList.observe(viewLifecycleOwner) { list ->
-        adapter.submitList(list)
-    }
-    itemLoading.setUpRefreshState(
-        this,
-        refreshLayout,
-        viewModel.refreshState,
-        refreshBlock = { viewModel.refresh(RefreshHint.pullToRefresh(), this) },
-        retryBlock = { viewModel.refresh(RefreshHint.initialLoad(), this) },
-        loadMoreBlock = { viewModel.loadMore(this) }
-    )
-    if (!viewModel.isInitialLoaded) {
-        viewModel.isInitialLoaded = true
-        viewModel.refresh(RefreshHint.initialLoad(), this)
-    }
-}
-
-fun ItemLoadingBinding.setUpRefreshState(
-    fragment: NavFragment,
-    refreshLayout: SmartRefreshLayout,
+fun ItemLoadingBinding.setUpHolderRefreshState(
     refreshState: LiveData<RefreshState>,
-    refreshBlock: () -> Unit,
+    viewLifecycleOwner: LifecycleOwner,
     retryBlock: () -> Unit,
-    loadMoreBlock: () -> Unit,
 ) {
-    with(fragment) {
-        val context = requireContext()
-        refreshLayout.setRefreshHeader(MaterialHeader(context))
-        refreshLayout.setOnRefreshListener {
-            refreshBlock.invoke()
-        }
-        refreshLayout.setOnLoadMoreListener {
-            loadMoreBlock.invoke()
-        }
-        emptyActionButton.setOnClick {
-            retryBlock.invoke()
-        }
-        refreshState.observe(viewLifecycleOwner) { refreshState ->
-            if (refreshState is RefreshState.LOADED) {
-                progressCircular.showProgress(false)
-                loadingFrame.isVisible = false
-                refreshLayout.finishRefresh()
-                refreshLayout.finishLoadMore()
-
-                if (refreshState.hasContent) {
-                    emptyFrame.isVisible = false
-                } else {
-                    emptyFrame.isVisible = true
-                    emptyActionButton.text = getString(R.string.refresh)
-                    emptyTitle.text = getString(R.string.empty_content_here)
-                }
-
-                if (refreshState.hasNext) {
-                    refreshLayout.setRefreshFooter(SlinkyFooter(context))
-                } else {
-                    refreshLayout.setRefreshFooter(FalsifyFooter(context))
-                }
-            } else if (refreshState is RefreshState.LOADING) {
-                emptyFrame.isVisible = false
-                if (refreshState.refreshHint?.cause == RefreshHint.Cause.PULL_TO_REFRESH) {
-                    loadingFrame.isVisible = false
-                    progressCircular.showProgress(false)
-                    if (!refreshLayout.isRefreshing) {
-                        refreshLayout.autoRefreshAnimationOnly()
-                    }
-                } else if (refreshState.refreshHint?.cause == RefreshHint.Cause.INITIAL_LOAD) {
-                    loadingFrame.isVisible = true
-                    progressCircular.showProgress(true)
-                }
-            } else if (refreshState is RefreshState.ERROR) {
-                progressCircular.showProgress(false)
-                loadingFrame.isVisible = false
-                refreshLayout.finishRefresh()
-                refreshLayout.finishLoadMore()
-
-                emptyFrame.isVisible = true
-                emptyActionButton.text = getString(R.string.retry)
-                emptyTitle.text = refreshState.exception.getHumanReadableMessage(context)
+    val context = root.context
+    emptyActionButton.setOnClick {
+        it.findFragmentOrNull<PixivFragment>()?.let { fragment ->
+            if (fragment.requireNetworkStateManager().canAccessGoogle.value == true) {
+                retryBlock.invoke()
+            } else {
+                openClashApp(context)
             }
+        }
+    }
+    refreshState.observe(viewLifecycleOwner) { refreshState ->
+        if (refreshState is RefreshState.LOADED) {
+            progressCircular.hideProgress()
+            loadingFrame.isVisible = false
+
+            if (refreshState.hasContent) {
+                emptyFrame.isVisible = false
+            } else {
+                emptyFrame.isVisible = true
+                emptyActionButton.text = context.getString(R.string.refresh)
+                emptyTitle.text = context.getString(R.string.empty_content_here)
+            }
+        } else if (refreshState is RefreshState.LOADING) {
+            emptyFrame.isVisible = false
+            if (refreshState.refreshHint == RefreshHint.PullToRefresh) {
+                loadingFrame.isVisible = false
+                progressCircular.hideProgress()
+            } else {
+                loadingFrame.isVisible = true
+                progressCircular.showProgress()
+            }
+        } else if (refreshState is RefreshState.ERROR) {
+            progressCircular.hideProgress()
+            loadingFrame.isVisible = false
+
+            emptyFrame.isVisible = true
+            emptyActionButton.text = context.getString(R.string.retry)
+            emptyTitle.text = refreshState.exception.getHumanReadableMessage(context)
         }
     }
 }
 
 fun Throwable.getHumanReadableMessage(context: Context): String {
-    return if (this is UnknownHostException || this is SSLHandshakeException || this is TimeoutException || this is SocketTimeoutException) {
+    return if (this is SSLHandshakeException || this is TimeoutException || this is SocketTimeoutException) {
         "${context.getString(R.string.connection_error)}: ${this.javaClass.simpleName}"
     } else {
         val lc = localizedMessage
@@ -151,7 +84,18 @@ fun Throwable.getHumanReadableMessage(context: Context): String {
             val title = titleAfter.substringBefore("</title>")
             title
         } else {
-            lc
+            if (this is HttpException) {
+                val errorBody = this.response()?.errorBody()?.string()
+                try {
+                    val obj = Shaft.sGson.fromJson(errorBody, ErrorResp::class.java)
+                    obj.error?.user_message ?: errorBody ?: ""
+                } catch (ex: Exception) {
+                    Timber.e(ex)
+                    errorBody ?: ""
+                }
+            } else {
+                "${lc}: ${this.javaClass.simpleName}"
+            }
         }
     }
 }

@@ -16,6 +16,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import ceui.lisa.R;
@@ -74,7 +75,6 @@ public class IllustDownload {
             if (illust.getPage_count() == 1) {
                 DownloadItem item = buildDownloadItem(illust, 0, imageResolution);
                 Common.showToast('1' + Shaft.getContext().getString(R.string.has_been_added));
-                Manager.get().addTask(item);
             }
         });
     }
@@ -87,7 +87,6 @@ public class IllustDownload {
         if (illust.getPage_count() == 1) {
             DownloadItem item = buildDownloadItem(illust, 0, imageResolution);
             Common.showToast('1' + Shaft.getContext().getString(R.string.has_been_added));
-            Manager.get().addTask(item);
         }
     }
 
@@ -99,7 +98,6 @@ public class IllustDownload {
             } else {
                 DownloadItem item = buildDownloadItem(illust, index);
                 Common.showToast('1' + Shaft.getContext().getString(R.string.has_been_added));
-                Manager.get().addTask(item);
             }
         });
     }
@@ -119,7 +117,6 @@ public class IllustDownload {
                     tempList.add(item);
                 }
                 Common.showToast(tempList.size() + Shaft.getContext().getString(R.string.has_been_added));
-                Manager.get().addTasks(tempList);
             }
         });
     }
@@ -136,7 +133,6 @@ public class IllustDownload {
                 tempList.add(item);
             }
             Common.showToast(tempList.size() + Shaft.getContext().getString(R.string.has_been_added));
-            Manager.get().addTasks(tempList);
         }
     }
 
@@ -170,7 +166,6 @@ public class IllustDownload {
                 }
             }
             Common.showToast(taskCount + Shaft.getContext().getString(R.string.has_been_added));
-            Manager.get().addTasks(tempList);
         });
     }
 
@@ -183,7 +178,6 @@ public class IllustDownload {
         item.setAutoSave(autoSave);
         item.setUrl(HostManager.get().replaceUrl(response.getUgoira_metadata().getZip_urls().getMedium()));
         item.setShowUrl(HostManager.get().replaceUrl(illust.getImage_urls().getMedium()));
-        Manager.get().addTask(item);
         return item;
     }
 
@@ -205,9 +199,43 @@ public class IllustDownload {
         downloadNovel(activity, displayName, content, targetCallback);
     }
 
+    public static String truncateTitle(String title, int maxLength) {
+        if (title == null)  return " ";
+        if (title.length() <= maxLength)  return title;
+        if (maxLength < 3) return title.substring(0, maxLength);
+
+        int available = maxLength - 3;
+        int front = available / 2;
+        int rear = available - front;
+
+        return title.substring(0, front) + "..." + title.substring(title.length() - rear);
+    }
+
+
+    public static String getNovelText( String title , NovelBean novelBean, NovelDetail novelDetail) {
+        String content = title +"\n\n"+
+                "RawTitle:"+novelBean.getTitle().replaceAll("([第（(章卷篇幕回节册季话集])", "$1'")+"\n"+
+                "Date:"+novelBean.getCreate_date().substring(0, 10)+" "+ "Length:"+novelBean.getText_length()+"\n"+
+                "Name:"+novelBean.getUser().getName()+"(https://www.pixiv.net/users/"+novelBean.getUser().getId()+ ")\n" +
+                "Source:"+"https://www.pixiv.net/novel/show.php?id="+novelBean.getId()+"\n"+
+                "Tags:"+Arrays.toString(novelBean.getTagNames())+"\n"+
+                "Caption:\n"+novelBean.getCaption().replaceAll("<br />", "\n")+
+                "\n>---------------------<\n";
+        content=content+ novelDetail.getNovel_text()+"\n\n";
+        return content;
+    }
+
+
     public static void downloadNovel(BaseActivity<?> activity, NovelBean novelBean, NovelDetail novelDetail, Callback<Uri> targetCallback) {
-        String displayName = FileCreator.deleteSpecialWords("Novel_" + novelBean.getId() + "_" + novelBean.getTitle() + ".txt");
-        String content = novelDetail.getNovel_text();
+
+        String title = novelBean.getTitle();
+        if (novelBean.getSeries()!= null && novelBean.getSeries().getTitle() != null){
+            title=novelBean.getSeries().getTitle()+"_"+title;
+        }
+        String newTitle = truncateTitle(title, 58);
+        String displayName = FileCreator.deleteSpecialWords("Novel_" + novelBean.getId() + "_" + newTitle + ".txt");
+
+        String content = getNovelText(title, novelBean, novelDetail);
         downloadNovel(activity, displayName, content, targetCallback);
     }
 
@@ -220,8 +248,8 @@ public class IllustDownload {
                     OutputStream outStream = new FileOutputStream(textFile);
                     outStream.write(content.getBytes());
                     outStream.close();
-                    Common.showLog("downloadNovel displayName " + displayName);
-                    OutPut.outPutNovel(activity, textFile, displayName);
+                    Common.showLog("downloadNovel displayName " + textFile.getName());
+                    OutPut.outPutNovel(activity, textFile, textFile.getName());
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -243,8 +271,8 @@ public class IllustDownload {
                     OutputStream outStream = new FileOutputStream(textFile);
                     outStream.write(content.getBytes());
                     outStream.close();
-                    Common.showLog("downloadFile displayName " + displayName);
-                    OutPut.outPutFile(activity, textFile, displayName);
+                    Common.showLog("downloadFile displayName " + textFile.getName());
+                    OutPut.outPutFile(activity, textFile, textFile.getName());
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -266,8 +294,8 @@ public class IllustDownload {
                     OutputStream outStream = new FileOutputStream(textFile);
                     outStream.write(content.getBytes());
                     outStream.close();
-                    Common.showLog("downloadBackupFile displayName " + displayName);
-                    OutPut.outPutBackupFile(activity, textFile, displayName);
+                    Common.showLog("downloadBackupFile displayName " + textFile.getName());
+                    OutPut.outPutBackupFile(activity, textFile, textFile.getName());
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

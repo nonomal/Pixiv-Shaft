@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<resources> 
-  <string name="app_name">PixShaft</string>  
-  <string name="navigation_drawer_open">내 비게 이 션 서랍 을 열다</string>  
+<resources>
+  <string name="navigation_drawer_open">내 비게 이 션 서랍 을 열다</string>
   <string name="navigation_drawer_close">내 비게 이 션 서랍 닫 기</string>  
   <string name="nav_header_title">안 드 로 이 드 스튜디오</string>  
   <string name="nav_header_subtitle">안 드 로 이 드 스튜디오@.안 드 로 이 드 닷 컴</string>  
@@ -174,7 +173,10 @@
   <string name="read_latest_episode">최신화 읽기</string>
   <string name="watchlist">워치리스트</string>
   <string name="episode_number">%d화</string>
-  <string name="string_1">차단 설정</string>  
+  <string name="add_to_watchlist">워치리스트에 추가</string>
+  <string name="already_in_your_watchlist">워치리스트에 추가됨</string>
+  <string name="read_latest_episode_with_num">최신화(#%1$d) 읽기</string>
+  <string name="string_1">차단 설정</string>
   <string name="string_2">개발 자 미리보기</string>  
   <string name="string_3">함께 나누다</string>  
   <string name="string_4">+ 관심</string>  
@@ -611,4 +613,5 @@
   <string name="string_454">첫 번째 이미지 공유</string>
   <string name="string_455">AI 작품 을 다른 디 렉 터 리 에 다운로드</string>
   <string name="core_string_novel_marker">책갈피</string>
+  <string name="string_font_size">글자 크기</string>
 </resources>

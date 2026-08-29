@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<resources> 
-  <string name="app_name">PixShaft</string>  
-  <string name="action_settings">Параметры</string>  
+<resources>
+  <string name="action_settings">Параметры</string>
   <string name="empty_list_1">На самом деле такого элемента не существует</string>  
   <string name="empty_list_2">На самом деле такого элемента не существует</string>  
   <string name="empty_list_3">На самом деле такого элемента не существует</string>  
@@ -606,5 +605,6 @@
   <string name="string_452">Тип лимита загрузки</string>
   <string name="string_453">Не автозапуск</string>
   <string name="string_454">Поделитесь первой картинкой</string>
-  <string name="string_455">работа AI загружена в другой каталог</string>  
+  <string name="string_455">работа AI загружена в другой каталог</string>
+  <string name="string_font_size">Размер шрифта</string>
 </resources>
